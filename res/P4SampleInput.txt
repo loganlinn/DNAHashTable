@@ -1,0 +1,60 @@
+
+
+
+
+
+
+      
+
+
+
+
+
+                
+insert AAAAA 40
+AAAATTTTCCCCGGGGAAAACCCCGGGGTTTTAAAATTTT                                                                               
+    print
+
+insert AAAA  40
+AAAATTTTCCCCGGGGAAAACCCCGGGGTTTTAAAATTTT
+print
+
+insert AAA  4
+AAAA
+
+                 print
+
+insert TTTTTTTTTTAAAAACCCA  40
+ACAATTTTCCCCGGGGAAAACCCCGGGGTTTTAAAATTTT
+           print
+
+insert TCATATCTATCCAAAAAAAA  40
+CCCCTTTTCCCCGGGGAAAACCCCGGGGTTTTAAAATTTT
+
+
+
+ print
+
+
+insert TCATATCTATCCAAAAAAA  39
+CCCTTTTCCCCGGGGAAAACCCCGGGGTTTTAAAATTTT
+       
+                                           print
+
+
+insert TCATATCTATCCAAAAAA  38
+CCTTTTCCCCGGGGAAAACCCCGGGGTTTTAAAATTTT
+print
+
+
+              remove AAAAA
+
+    remove AAA
+
+remove AAAA
+
+print
+
+                 search AAAAA
+
+        search TCATATCTATCCAAAAAA
