@@ -1,6 +1,7 @@
+import java.io.IOException;
+
 /**
- * DNA HASH TABLES
- * CS3114 Project 4
+ * DNA HASH TABLES CS3114 Project 4
  * 
  * == RUNNING ==
  * 
@@ -8,7 +9,7 @@
  * 
  * 
  * @author loganlinn
- *
+ * 
  */
 public class P4 {
 
@@ -43,14 +44,28 @@ public class P4 {
 	 * 
 	 * OS: Mac OS X 10.6.6
 	 * 
-	 * == DATE COMPLETED ==
-	 * TODO: fill in date completed
+	 * == DATE COMPLETED == TODO: fill in date completed
 	 * 
 	 * @param args
 	 */
-	public static void main(String[] args) {
+	public static final int IND_COMMAND_FILE = 0;
+	public static final int IND_HASH_FILE = 1;
+	public static final int IND_HASH_TABLE_SIZE = 2;
+	public static final int IND_MEMORY_FILE = 3;
+
+	public static void main(String[] args) throws IOException {
+		MemoryManager sequenceFileMemoryManager = new MemoryManager(
+				args[IND_MEMORY_FILE]);
 		
+		int hashTableSize = Integer.parseInt(args[IND_HASH_TABLE_SIZE]);
 		
+		HashTable hashTable = new HashTable(args[IND_HASH_FILE],
+				hashTableSize, sequenceFileMemoryManager);
+		
+		CommandFile commandFile = new CommandFile(args[IND_COMMAND_FILE],
+				hashTable, sequenceFileMemoryManager);
+		
+		commandFile.parse();
 
 	}
 

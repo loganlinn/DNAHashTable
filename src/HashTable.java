@@ -24,7 +24,7 @@ public class HashTable {
 	protected static final int ID_LEN_OFFSET = 1;
 	protected static final int SEQ_POS_OFFSET = 2;
 	protected static final int SEQ_LEN_OFFSET = 3;
-	
+
 	protected final int numSlots;
 	protected final MemoryManager memoryManager;
 	protected final MemoryManager sequenceFileMemoryManager;
@@ -37,7 +37,8 @@ public class HashTable {
 	 * @param numSlots
 	 * @throws IOException
 	 */
-	public HashTable(String fileName, int numSlots, MemoryManager sequenceFileMemoryManager) throws IOException {
+	public HashTable(String fileName, int numSlots,
+			MemoryManager sequenceFileMemoryManager) throws IOException {
 		this.numSlots = numSlots;
 		this.memoryManager = new MemoryManager(fileName);
 		this.sequenceFileMemoryManager = sequenceFileMemoryManager;
@@ -64,10 +65,10 @@ public class HashTable {
 		int currentSlot = homeSlot;
 
 		// boolean inserted = false;
-		System.out.println("Inserting " + sequenceID);
+		// System.out.println("Inserting " + sequenceID);
 		do {
 			if (isSlotAvailable(currentSlot)) {
-				System.out.println("  Took slot " + currentSlot);
+				// System.out.println("  Took slot " + currentSlot);
 
 				MemoryHandle handle = memoryManager.storeSequence(sequenceID);
 				setSlot(currentSlot, handle.getSequenceFileOffset(),
@@ -83,8 +84,8 @@ public class HashTable {
 				}
 			}
 
-			System.out
-					.println("  Slot " + currentSlot + " taken, getting next");
+			// System.out
+			// .println("  Slot " + currentSlot + " taken, getting next");
 			currentSlot = nextSlot(currentSlot);
 		} while (currentSlot != homeSlot);
 
@@ -113,9 +114,13 @@ public class HashTable {
 					// Print the full sequence
 					printSequence(currentSlot);
 					// Remove the sequence ID from HashTable's MM
-					memoryManager.removeSequence(getSequenceIdOffset(currentSlot), getSequenceIdLength(currentSlot));
+					memoryManager.removeSequence(
+							getSequenceIdOffset(currentSlot),
+							getSequenceIdLength(currentSlot));
 					// Remove the sequence from the sequence file MM
-					sequenceFileMemoryManager.removeSequence(getSequenceOffset(currentSlot), getSequenceLength(currentSlot));
+					sequenceFileMemoryManager.removeSequence(
+							getSequenceOffset(currentSlot),
+							getSequenceLength(currentSlot));
 					// Clear the slot in the hash table
 					removeSlot(currentSlot);
 					return;
@@ -171,18 +176,26 @@ public class HashTable {
 	 * Prints the contents of the HashTable
 	 */
 	public void print() {
+		System.out.println("SequenceIDs:");
 		for (int slot = 0; slot < numSlots; slot++) {
-			String slotVal;
-			if (isSlotEmpty(slot)) {
-				slotVal = "empty";
-			} else if (isSlotTombstone(slot)) {
-				slotVal = "tombstone";
-			} else {
-				slotVal = retrieveSequenceID(slot);
-			}
+			// String slotVal;
+			// if (isSlotEmpty(slot)) {
+			// slotVal = "empty";
+			// } else if (isSlotTombstone(slot)) {
+			// slotVal = "tombstone";
+			// } else {
+			// slotVal = retrieveSequenceID(slot);
+			// }
+			//
+			// System.out.println(slot + " -> " + slotVal);
 
-			System.out.println(slot + " -> " + slotVal);
+			if (!isSlotAvailable(slot)) {
+				System.out.print("  ");
+				System.out.print(retrieveSequenceID(slot));
+				System.out.println(": hash slot [" + slot + "]");
+			}
 		}
+		sequenceFileMemoryManager.printFreeBlocks();
 	}
 
 	/**
@@ -346,7 +359,7 @@ public class HashTable {
 		return (int) (Math.abs(sum) % this.numSlots);
 	}
 
-	public void printFreeBlocks(){
+	public void printFreeBlocks() {
 		memoryManager.printFreeBlocks();
 	}
 }

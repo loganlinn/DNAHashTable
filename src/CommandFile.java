@@ -81,7 +81,7 @@ public class CommandFile {
 	 * @throws IOException
 	 * @throws P3Exception
 	 */
-	public void parse(HashTable table, MemoryManager memoryManager)
+	public void parse()
 			throws IOException {
 
 		File commandFile = new File(this.commandFilePath);
