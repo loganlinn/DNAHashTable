@@ -28,13 +28,19 @@ public class CommandFile {
 	private int lineNumber = 0; // Tracks which line of the command file we are
 								// parsing
 
+	private HashTable hashTable;
+	private MemoryManager sequenceMemoryManager;
+
 	/**
 	 * Constructs a CommandFile given the path to a command file
 	 * 
 	 * @param path
 	 */
-	public CommandFile(String path) {
+	public CommandFile(String path, HashTable hashTable,
+			MemoryManager sequenceMemoryManager) {
 		commandFilePath = path;
+		this.hashTable = hashTable;
+		this.sequenceMemoryManager = sequenceMemoryManager;
 	}
 
 	/**
@@ -92,45 +98,69 @@ public class CommandFile {
 			if (line.startsWith("#")) {
 				continue;
 			}
-			
+
 			// Use a tokenizer to ignore whitespace and iterate trough command
 			StringTokenizer lineTokens = new StringTokenizer(line);
-			
+
 			if (lineTokens.hasMoreTokens()) {
 				command = lineTokens.nextToken();
 
 				if (INSERT_COMMAND.equals(command)) {
+					
 					/*
 					 * Insert command
 					 */
 					argument = getNextArgument(lineTokens);// sequenceId
+					try {
+						String sequence = br.readLine();
+						lineNumber++;
+						if(sequence == null || sequence.isEmpty()){
+							System.out.println("Expecting a sequence!"+getLineNumberMessage());
+							continue;
+						}
+						hashTable.insert(argument, sequenceMemoryManager
+								.storeSequence(sequence));
+					} catch (HashTableFullException e) {
+						System.out.println(e.getMessage());
+					} catch (DuplicateSequenceException e) {
+						System.out.println(e.getMessage());
+					}
 					
 				} else if (REMOVE_COMMAND.equals(command)) {
+					
 					/*
 					 * Remove command
 					 */
 					argument = getNextArgument(lineTokens);
-//					tree.remove(new Sequence(argument));
+					try {
+						hashTable.remove(argument);
+					} catch (SequenceNotFoundException e) {
+						System.out.println(e.getMessage());
+					}
+					
 				} else if (PRINT_COMMAND.equals(command)) {
+					
 					/*
 					 * Print command
 					 */
-//					tree.print();
+					hashTable.print();
+					
 				} else if (SEARCH_COMMAND.equals(command)) {
+					
 					/*
 					 * Search command, find the mode
 					 */
 					argument = getNextArgument(lineTokens); // argument is a
 															// sequence
 															// descriptor
-					if (argument != null) {
-//						tree.search(new SearchCommand(argument));
-
-					} else {
-						throw new IOException(SEARCH_COMMAND
-								+ " missing argument." + getLineNumberMessage());
+					try {
+						hashTable.search(argument);
+					} catch (SequenceNotFoundException e) {
+						System.out.println(e.getMessage());
 					}
+					
 				} else {
+					
 					// The command isn't recognized, throw an exception
 					throw new IOException(UNKNOWN_COMMAND_ERROR_PREFIX
 							+ command + getLineNumberMessage());
@@ -143,6 +173,7 @@ public class CommandFile {
 
 	/**
 	 * Format a message indicating which line number is currently being parsed
+	 * 
 	 * @return
 	 */
 	private String getLineNumberMessage() {
