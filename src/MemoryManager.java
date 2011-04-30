@@ -3,8 +3,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
-import java.util.Iterator;
-import java.util.ListIterator;
 
 /**
  * Manages the file that stores long sequences using first fit approach.

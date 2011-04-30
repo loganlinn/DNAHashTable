@@ -1,6 +1,11 @@
 
 public class SequenceNotFoundException extends Exception {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3694290781562104101L;
+
 	public SequenceNotFoundException() {
 		super();
 		// TODO Auto-generated constructor stub

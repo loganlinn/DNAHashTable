@@ -64,13 +64,13 @@ public class CommandFile {
 	 * @return
 	 * @throws NumberFormatException
 	 */
-	private int getNextIntArgument(StringTokenizer tokenizer)
-			throws NumberFormatException {
-		if (tokenizer.hasMoreTokens()) {
-			return Integer.parseInt(tokenizer.nextToken());
-		}
-		return -1;
-	}
+//	private int getNextIntArgument(StringTokenizer tokenizer)
+//			throws NumberFormatException {
+//		if (tokenizer.hasMoreTokens()) {
+//			return Integer.parseInt(tokenizer.nextToken());
+//		}
+//		return -1;
+//	}
 
 	/**
 	 * Parses the command file Throws an appropriate exception if an error is
@@ -89,7 +89,6 @@ public class CommandFile {
 		BufferedReader br = new BufferedReader(new InputStreamReader(
 				new DataInputStream(new FileInputStream(commandFile))));
 		String line, command, argument = null;
-		int length;
 		while ((line = br.readLine()) != null) {
 			lineNumber++;
 			/**
