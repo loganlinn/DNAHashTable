@@ -40,15 +40,42 @@ class LinkedList<E> {
 	}
 
 	// Remove and return current element
-	public E remove() {
-		if (curr.next() == null)
+	// public E remove() {
+	// if (curr.next() == null)
+	// return null; // Nothing to remove
+	// E it = curr.next().element(); // Remember value
+	// if (tail == curr.next())
+	// tail = curr; // Removed last
+	// curr.setNext(curr.next().next()); // Remove from list
+	// cnt--; // Decrement count
+	// return it; // Return value
+	// }
+
+	public E remove(Link<E> link) {
+		if (link.next() == null)
 			return null; // Nothing to remove
-		E it = curr.next().element(); // Remember value
-		if (tail == curr.next())
-			tail = curr; // Removed last
-		curr.setNext(curr.next().next()); // Remove from list
+		E it = link.next().element(); // Remember value
+		if (tail == link.next())
+			tail = link; // Removed last
+		link.setNext(link.next().next()); // Remove from list
 		cnt--; // Decrement count
 		return it; // Return value
+	}
+
+	public E remove() {
+		return remove(curr);
+	}
+
+	public E remove(E it) {
+		Link<E> temp = head;
+		int i;
+		for (i = 0; i < cnt; i++) {
+			if (temp.next().element() == it) {
+				return remove(temp);
+			}
+			temp = temp.next();
+		}
+		return null;
 	}
 
 	public void moveToStart() // Set curr at list start
@@ -106,6 +133,13 @@ class LinkedList<E> {
 	}
 
 	// Extra stuff not printed in the book.
+	public boolean hasNext() {
+//		System.out.println("  len:"+length());
+//		System.out.println("  head==tail?"+(head==tail));
+//		System.out.println("  head==curr?"+(head==curr));
+//		System.out.println("  curr==tail?"+(curr==tail));
+		return (curr != tail);
+	}
 
 	/**
 	 * Generate a human-readable representation of this list's contents that

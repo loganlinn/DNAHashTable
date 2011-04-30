@@ -6,15 +6,14 @@
  */
 public class MemoryHandle {
 	private final int sequenceLength;
-	private final long sequenceFileOffset;
+	private final int sequenceFileOffset;
 
 	/**
 	 * 
 	 * @param sequenceLength
 	 * @param sequenceFileOffset
 	 */
-	public MemoryHandle(long sequenceFileOffset, int sequenceLength) {
-		super();
+	public MemoryHandle(int sequenceFileOffset, int sequenceLength) {
 		this.sequenceLength = sequenceLength;
 		this.sequenceFileOffset = sequenceFileOffset;
 	}
@@ -29,7 +28,7 @@ public class MemoryHandle {
 	/**
 	 * @return the sequenceFileOffset
 	 */
-	public long getSequenceFileOffset() {
+	public int getSequenceFileOffset() {
 		return sequenceFileOffset;
 	}
 

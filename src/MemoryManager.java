@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.ListIterator;
 
 /**
@@ -17,7 +16,6 @@ import java.util.ListIterator;
  * 
  */
 public class MemoryManager {
-	public static final String FILE_NAME = "biofile.out";
 	private File sequenceFile;
 	private RandomAccessFile seqAccess;
 	private FirstFitList firstFit = new FirstFitList();
@@ -27,8 +25,8 @@ public class MemoryManager {
 	 * 
 	 * @throws IOException
 	 */
-	public MemoryManager() throws IOException {
-		sequenceFile = new File(FILE_NAME);
+	public MemoryManager(String fileName) throws IOException {
+		sequenceFile = new File(fileName);
 		seqAccess = new RandomAccessFile(sequenceFile, "rw");
 		seqAccess.setLength(0); // clear out the file
 	}
@@ -44,7 +42,7 @@ public class MemoryManager {
 		int sequenceBlockLength = getEncodedSequenceLength(sequenceDescriptor
 				.length());
 
-		long byteOffset = firstFit.allocateBlock(sequenceBlockLength);
+		int byteOffset = firstFit.allocateBlock(sequenceBlockLength);
 
 		// System.out.println("  storing @ " + byteOffset);
 
@@ -176,10 +174,10 @@ public class MemoryManager {
 	 */
 	public static String decode(byte[] data, int length) {
 		StringBuilder sb = new StringBuilder();
-//		if (getEncodedSequenceLength(length) > data.length) {
-//			System.err.println("Length does not match data!");
-//			return null;
-//		}
+		// if (getEncodedSequenceLength(length) > data.length) {
+		// System.err.println("Length does not match data!");
+		// return null;
+		// }
 		int byteInd = 0, charsDecoded = 0;
 		while (charsDecoded < length) {
 			byte b = data[byteInd];
@@ -288,17 +286,18 @@ public class MemoryManager {
 
 			int size = MemoryManager.getEncodedSequenceLength(handle
 					.getSequenceLength());
-			long offset = handle.getSequenceFileOffset();
-			long end = size + offset;
+			int offset = handle.getSequenceFileOffset();
+			int end = size + offset;
 
 			/*
 			 * Find blocks that could be merged
 			 */
-			ListIterator<FreeBlock> blockIt = freeBlocks.listIterator();
 			FreeBlock prevBlock = null;
 			FreeBlock nextBlock = null;
-			while (blockIt.hasNext()) {
-				FreeBlock currBlock = blockIt.next();
+			freeBlocks.moveToStart();
+			while (freeBlocks.hasNext()) {
+				
+				FreeBlock currBlock = freeBlocks.getValue();
 
 				if (currBlock.getEnd() == offset) {
 					prevBlock = currBlock;
@@ -319,9 +318,10 @@ public class MemoryManager {
 					 * Move iterator back so we can INSERT right BEFORE
 					 * currBlock which has a LARGER offset
 					 */
-					blockIt.previous();
+					freeBlocks.prev();
 					break;
 				}
+				freeBlocks.next();
 			}
 
 			/*
@@ -339,7 +339,7 @@ public class MemoryManager {
 				 * If lists is empty, iterator will add to beginning. Else, we
 				 * are inserting before the bigger
 				 */
-				blockIt.add(new FreeBlock(size, offset));
+				freeBlocks.insert(new FreeBlock(size, offset));
 			}
 
 		}
@@ -371,22 +371,23 @@ public class MemoryManager {
 		 *            in bytes
 		 * @return
 		 */
-		public long allocateBlock(int blockSize) {
-			Iterator<FreeBlock> blockIt = freeBlocks.iterator();
+		public int allocateBlock(int blockSize) {
 			FreeBlock block = null;
-			while (blockIt.hasNext()) {
-				block = blockIt.next();
+			freeBlocks.moveToStart();
+			while (freeBlocks.hasNext()) {
+				block = freeBlocks.getValue();
 				if (block.getSize() == blockSize) {
 					/*
 					 * If sizes are exact matches, we consume this block
 					 */
-					blockIt.remove();
+					freeBlocks.remove();
 					return block.getOffset();
 				} else if (block.getSize() > blockSize) {
-					long offset = block.getOffset();
+					int offset = block.getOffset();
 					block.takeFromFront(blockSize);
 					return offset;
 				}
+				freeBlocks.next();
 			}
 
 			/*
@@ -396,10 +397,10 @@ public class MemoryManager {
 			 * 
 			 * If block is null, there are no free blocks, so we store at end
 			 */
-			long eof = sequenceFile.length();
+			int eof = (int) sequenceFile.length();
 			if (block != null && block.getEnd() >= eof) {
 				eof -= block.getSize(); // take this free block
-				blockIt.remove();
+				freeBlocks.remove();
 			}
 			return eof;
 		}
@@ -408,14 +409,11 @@ public class MemoryManager {
 		 * Print the FirstFit's free blocks
 		 */
 		public void print() {
-			if (freeBlocks.isEmpty()) {
+			if (freeBlocks.length() == 0) {
 				System.out.println("  Free Block List: none");
-				return;
-			}
-			System.out.println("  Free Block List:");
-			int i = 0;
-			for (FreeBlock block : freeBlocks) {
-				System.out.println("  [Block " + (++i) + "] " + block.toString());
+			} else {
+				System.out.println("  Free Block List:");
+				System.out.println(freeBlocks);
 			}
 		}
 
@@ -427,7 +425,7 @@ public class MemoryManager {
 		 */
 		private class FreeBlock {
 			private int size; // block size in bytes
-			private long offset; // location in file
+			private int offset; // location in file
 
 			/**
 			 * Constructs a FreeBlock
@@ -437,7 +435,7 @@ public class MemoryManager {
 			 * @param offset
 			 *            from beginning of file in BYTES
 			 */
-			public FreeBlock(int size, long offset) {
+			public FreeBlock(int size, int offset) {
 				super();
 				this.size = size;
 				this.offset = offset;
@@ -453,14 +451,14 @@ public class MemoryManager {
 			/**
 			 * @return the offset
 			 */
-			public long getOffset() {
+			public int getOffset() {
 				return offset;
 			}
 
 			/**
 			 * @return the offset of the end of the free block
 			 */
-			public long getEnd() {
+			public int getEnd() {
 				return offset + size;
 			}
 
@@ -501,9 +499,9 @@ public class MemoryManager {
 			 * Print a message representing this free block
 			 */
 			public String toString() {
-				return "Starting Byte Location: " + offset + ", Size " + size
-						+ (size == 1 ? " byte" : " bytes");
+				return "[Offset: " + offset + ", Size:" + size + "]";
 			}
 		} /* end FreeBlock */
 	} /* end FirstFitList */
+
 } /* end MemoryManager */
