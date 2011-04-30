@@ -139,7 +139,17 @@ public class HashTable {
 		int currentSlot = homeSlot;
 
 		do {
-
+			if (isSlotEmpty(currentSlot)) {
+				throw new SequenceNotFoundException(sequenceID);
+			} else if (!isSlotTombstone(currentSlot)
+					&& getSequenceIdLength(currentSlot) == sequenceID.length()) {
+				// Check if we found it
+				if (sequenceID.equals(retrieveSequenceID(currentSlot))) {
+					// Print the full sequence
+					printSequence(currentSlot);
+					return;
+				}
+			}
 			currentSlot = nextSlot(currentSlot);
 		} while (currentSlot != homeSlot);
 

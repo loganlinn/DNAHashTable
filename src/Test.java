@@ -16,9 +16,13 @@ public class Test {
 			
 			ht.insert("AA", sfm.storeSequence("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT"));
 			ht.remove("AA");
+			ht.insert("CC", sfm.storeSequence("AAAAAGGGCCCTTTA"));
+			ht.search("CC");
+			ht.search("CCC");
+			
 //			ht.print();
-			ht.printFreeBlocks();
-			sfm.printFreeBlocks();
+//			ht.printFreeBlocks();
+//			sfm.printFreeBlocks();
 			
 			
 //			ht.insert("C", null);
