@@ -14,19 +14,21 @@ import java.io.IOException;
  * 
  */
 public class HashTable {
-	public static final int EMPTY_SLOT = -1;
-	public static final int TOMBSTONE_SLOT = -2;
+	protected static final int EMPTY_SLOT = -1;
+	protected static final int TOMBSTONE_SLOT = -2;
 
-	public static final int BUCKET_SIZE = 32; // slots
-	public static final int SLOT_SIZE = 4; // 4-byte integers
+	protected static final int BUCKET_SIZE = 32; // slots
+	protected static final int SLOT_SIZE = 4; // 4-byte integers
 
-	public static final int ID_POS_OFFSET = 0;
-	public static final int ID_LEN_OFFSET = 1;
-	public static final int SEQ_POS_OFFSET = 2;
-	public static final int SEQ_LEN_OFFSET = 3;
-	public final int numSlots;
-	public final MemoryManager memoryManager;
-	public final int[] table;
+	protected static final int ID_POS_OFFSET = 0;
+	protected static final int ID_LEN_OFFSET = 1;
+	protected static final int SEQ_POS_OFFSET = 2;
+	protected static final int SEQ_LEN_OFFSET = 3;
+	
+	protected final int numSlots;
+	protected final MemoryManager memoryManager;
+	protected final MemoryManager sequenceFileMemoryManager;
+	protected final int[] table;
 
 	/**
 	 * Constructs a HashTable
@@ -35,9 +37,10 @@ public class HashTable {
 	 * @param numSlots
 	 * @throws IOException
 	 */
-	public HashTable(String fileName, int numSlots) throws IOException {
+	public HashTable(String fileName, int numSlots, MemoryManager sequenceFileMemoryManager) throws IOException {
 		this.numSlots = numSlots;
 		this.memoryManager = new MemoryManager(fileName);
+		this.sequenceFileMemoryManager = sequenceFileMemoryManager;
 		// Create hash table
 		this.table = new int[numSlots * SLOT_SIZE];
 		// Initialize the table to empty slot values
@@ -68,7 +71,9 @@ public class HashTable {
 
 				MemoryHandle handle = memoryManager.storeSequence(sequenceID);
 				setSlot(currentSlot, handle.getSequenceFileOffset(),
-						handle.getSequenceLength(), 0, 0);
+						handle.getSequenceLength(),
+						sequenceHandle.getSequenceFileOffset(),
+						sequenceHandle.getSequenceLength());
 				return;
 
 			} else if (getSequenceIdLength(currentSlot) == sequenceID.length()) {
@@ -105,7 +110,13 @@ public class HashTable {
 					&& getSequenceIdLength(currentSlot) == sequenceID.length()) {
 				// Check if we found it
 				if (sequenceID.equals(retrieveSequenceID(currentSlot))) {
+					// Print the full sequence
 					printSequence(currentSlot);
+					// Remove the sequence ID from HashTable's MM
+					memoryManager.removeSequence(getSequenceIdOffset(currentSlot), getSequenceIdLength(currentSlot));
+					// Remove the sequence from the sequence file MM
+					sequenceFileMemoryManager.removeSequence(getSequenceOffset(currentSlot), getSequenceLength(currentSlot));
+					// Clear the slot in the hash table
 					removeSlot(currentSlot);
 					return;
 				}
@@ -141,16 +152,15 @@ public class HashTable {
 	 * @param slot
 	 */
 	public void printSequence(int slot) {
-		// TODO: IMPLEMENT!
+		String sequence = sequenceFileMemoryManager.retrieveSequence(
+				getSequenceOffset(slot), getSequenceLength(slot));
+		System.out.println(sequence);
 	}
 
 	/**
 	 * Prints the contents of the HashTable
 	 */
 	public void print() {
-		for (int i = 0; i < numSlots * SLOT_SIZE; i++) {
-			System.out.println(i + " " + table[i]);
-		}
 		for (int slot = 0; slot < numSlots; slot++) {
 			String slotVal;
 			if (isSlotEmpty(slot)) {
@@ -237,6 +247,26 @@ public class HashTable {
 	}
 
 	/**
+	 * Returns length portion of sequence ID handle for stored in a given slot
+	 * 
+	 * @param slot
+	 * @return
+	 */
+	protected int getSequenceLength(int slot) {
+		return table[slot * SLOT_SIZE + SEQ_LEN_OFFSET];
+	}
+
+	/**
+	 * Returns offset portion of sequence ID handle for a slot
+	 * 
+	 * @param slot
+	 * @return
+	 */
+	protected int getSequenceOffset(int slot) {
+		return table[slot * SLOT_SIZE + SEQ_POS_OFFSET];
+	}
+
+	/**
 	 * Checks if a slot is empty
 	 * 
 	 * @param slot
@@ -306,4 +336,7 @@ public class HashTable {
 		return (int) (Math.abs(sum) % this.numSlots);
 	}
 
+	public void printFreeBlocks(){
+		memoryManager.printFreeBlocks();
+	}
 }

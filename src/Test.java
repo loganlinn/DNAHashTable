@@ -11,11 +11,15 @@ public class Test {
 	
 	public static void htTest(){
 		try {
-			HashTable ht = new HashTable("test.ht", 32);
+			sfm = new MemoryManager("test.mm");
+			HashTable ht = new HashTable("test.ht", 32, sfm);
 			
-			ht.insert("AA", null);
-			ht.insert("AA", null);
-			ht.print();
+			ht.insert("AA", sfm.storeSequence("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT"));
+			ht.remove("AA");
+//			ht.print();
+			ht.printFreeBlocks();
+			sfm.printFreeBlocks();
+			
 			
 //			ht.insert("C", null);
 //			ht.insert("G", null);
@@ -58,6 +62,9 @@ public class Test {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		} catch (DuplicateSequenceException e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		} catch (SequenceNotFoundException e) {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
