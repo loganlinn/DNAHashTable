@@ -76,6 +76,10 @@ public class MemoryManager {
 		firstFit.releaseBlock(handle);
 		return retrieveSequence(handle);
 	}
+	public String removeSequence(int offset, int length){
+		firstFit.releaseBlock(offset, length);
+		return retrieveSequence(offset, length);
+	}
 
 	/**
 	 * Reads the database for the sequence stored at the location described by
@@ -85,12 +89,16 @@ public class MemoryManager {
 	 * @return
 	 */
 	public String retrieveSequence(MemoryHandle handle) {
-		int bytesToRead = getEncodedSequenceLength(handle.getSequenceLength());
+		return retrieveSequence(handle.getSequenceFileOffset(), handle.getSequenceLength());
+	}
+	public String retrieveSequence(int offset, int length) {
+//		System.out.println("retrieveSequence("+offset+", "+length+")");// Debug message
+		int bytesToRead = getEncodedSequenceLength(length);
 		byte[] sequenceBuffer = new byte[bytesToRead]; // Create a buffer to
 														// store the sequence
 		try {
 
-			seqAccess.seek(handle.getSequenceFileOffset());
+			seqAccess.seek(offset);
 
 			seqAccess.read(sequenceBuffer);
 
@@ -100,9 +108,9 @@ public class MemoryManager {
 			e.printStackTrace();
 		}
 
-		return decode(sequenceBuffer, handle.getSequenceLength());
+		return decode(sequenceBuffer, length);
 	}
-
+	
 	/**
 	 * Gets the number of bytes: eg ceil(data/4) without need to cast to cast or
 	 * divide
@@ -283,10 +291,10 @@ public class MemoryManager {
 		 * @param handle
 		 */
 		public void releaseBlock(MemoryHandle handle) {
-
-			int size = MemoryManager.getEncodedSequenceLength(handle
-					.getSequenceLength());
-			int offset = handle.getSequenceFileOffset();
+			releaseBlock(handle.getSequenceFileOffset(), handle.getSequenceLength());
+		}
+		public void releaseBlock(int offset, int length) {
+			int size = MemoryManager.getEncodedSequenceLength(length);
 			int end = size + offset;
 
 			/*

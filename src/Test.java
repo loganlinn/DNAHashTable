@@ -1,11 +1,66 @@
 import java.io.IOException;
 
-public class MemoryManagerTest {
+public class Test {
 	static MemoryManager sfm;
 
 	public static void main(String[] args) {
 //		llTest();
-		mmTest();
+//		mmTest();
+		htTest();
+	}
+	
+	public static void htTest(){
+		try {
+			HashTable ht = new HashTable("test.ht", 32);
+			
+			ht.insert("AA", null);
+			ht.insert("AA", null);
+			ht.print();
+			
+//			ht.insert("C", null);
+//			ht.insert("G", null);
+//			ht.insert("T", null);
+//			ht.insert("AA", null);
+//			ht.insert("CC", null);
+//			ht.insert("GG", null);
+//			ht.insert("TT", null);
+//			ht.insert("AAA", null);
+//			ht.insert("CCC", null);
+//			ht.insert("GGG", null);
+//			ht.insert("TTT", null);
+//			ht.insert("AAAA", null);
+//			ht.insert("CCCC", null);
+//			ht.insert("GGGG", null);
+//			ht.insert("TTTT", null);
+			/*
+				Inserting A to slot 16
+				Inserting C to slot 17
+				Inserting G to slot 19
+				Inserting T to slot 27
+				Inserting AA to slot 18
+				Inserting CC to slot 35
+				Inserting GG to slot 53
+				Inserting TT to slot 59
+				Inserting AAA to slot 18
+				Inserting CCC to slot 35
+				Inserting GGG to slot 53
+				Inserting TTT to slot 59
+				Inserting AAAA to slot 18
+				Inserting CCCC to slot 35
+				Inserting GGGG to slot 53
+				Inserting TTTT to slot 59
+			 */
+
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (HashTableFullException e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		} catch (DuplicateSequenceException e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
 	}
 	
 	public static void llTest(){
