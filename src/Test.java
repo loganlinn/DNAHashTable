@@ -13,12 +13,28 @@ public class Test {
 		try {
 			sfm = new MemoryManager("test.mm");
 			HashTable ht = new HashTable("test.ht", 32, sfm);
+			int[] bucket;
+//			bucket = ht.readBucket(0);
+//			for(int i = 0; i < bucket.length; i++){
+//				System.out.println(bucket[i]);
+//			}
 			
-			ht.insert("AA", sfm.storeSequence("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT"));
+			ht.insert("AA", sfm.storeSequence("AA"), sfm.storeSequence("AGTACGTAGTACGTAGTACGT"));
+			ht.insert("AC", sfm.storeSequence("AC"), sfm.storeSequence("ACAACACACACCCAACA"));
+			ht.print();
+			
 			ht.remove("AA");
-			ht.insert("CC", sfm.storeSequence("AAAAAGGGCCCTTTA"));
-			ht.search("CC");
-			ht.search("CCC");
+			ht.print();
+//			bucket = ht.readBucket(1);
+//			for(int i = 0; i < bucket.length; i++){
+//				System.out.println(bucket[i]);
+//			}
+			
+//			ht.insert("AA", sfm.storeSequence("ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT"));
+//			ht.remove("AA");
+//			ht.insert("CC", sfm.storeSequence("AAAAAGGGCCCTTTA"));
+//			ht.search("CC");
+//			ht.search("CCC");
 			
 //			ht.print();
 //			ht.printFreeBlocks();
@@ -62,7 +78,7 @@ public class Test {
 			
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch (HashTableFullException e) {
+		}catch (HashTableFullException e) {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		} catch (DuplicateSequenceException e) {

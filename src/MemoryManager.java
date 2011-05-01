@@ -87,7 +87,7 @@ public class MemoryManager {
 	 * @return
 	 */
 	public String retrieveSequence(MemoryHandle handle) {
-		return retrieveSequence(handle.getSequenceFileOffset(), handle.getSequenceLength());
+		return retrieveSequence(handle.getByteOffset(), handle.getSequenceLength());
 	}
 	public String retrieveSequence(int offset, int length) {
 //		System.out.println("retrieveSequence("+offset+", "+length+")");// Debug message
@@ -289,7 +289,7 @@ public class MemoryManager {
 		 * @param handle
 		 */
 		public void releaseBlock(MemoryHandle handle) {
-			releaseBlock(handle.getSequenceFileOffset(), handle.getSequenceLength());
+			releaseBlock(handle.getByteOffset(), handle.getSequenceLength());
 		}
 		public void releaseBlock(int offset, int length) {
 			int size = MemoryManager.getEncodedSequenceLength(length);

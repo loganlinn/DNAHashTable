@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
 /**
  * Each slot of the hash table stores two memory handles: One memory handle is
@@ -19,6 +20,10 @@ public class HashTable {
 
 	protected static final int BUCKET_SIZE = 32; // slots
 	protected static final int SLOT_SIZE = 4; // 4-byte integers
+	protected static final int SLOT_ITEM_BYTES = 4; // 4 bytes
+	protected static final int SLOTS_IN_BUCKET = BUCKET_SIZE * SLOT_SIZE;
+	protected static final int BYTES_IN_BUCKET = SLOTS_IN_BUCKET
+			* SLOT_ITEM_BYTES;
 
 	protected static final int ID_POS_OFFSET = 0;
 	protected static final int ID_LEN_OFFSET = 1;
@@ -27,8 +32,12 @@ public class HashTable {
 
 	protected final int numSlots;
 	protected final MemoryManager memoryManager;
-	protected final MemoryManager sequenceFileMemoryManager;
-	protected final int[] table;
+
+	private int[] currentBucket;
+	private int currentBucketNum = 0;
+	private boolean currentBucketDirty = true;
+
+	protected RandomAccessFile hashTable;
 
 	/**
 	 * Constructs a HashTable
@@ -40,15 +49,61 @@ public class HashTable {
 	public HashTable(String fileName, int numSlots,
 			MemoryManager sequenceFileMemoryManager) throws IOException {
 		this.numSlots = numSlots;
-		this.memoryManager = new MemoryManager(fileName);
-		this.sequenceFileMemoryManager = sequenceFileMemoryManager;
+		this.memoryManager = sequenceFileMemoryManager;
 		// Create hash table
-		this.table = new int[numSlots * SLOT_SIZE];
-		// Initialize the table to empty slot values
-		for (int i = 0; i < numSlots; i++) {
-			clearSlot(i);
+		hashTable = new RandomAccessFile(fileName, "rw");
+		emptyHashTable();
+	}
+
+	private void emptyHashTable() throws IOException {
+		hashTable.setLength(0);
+		hashTable.setLength(numSlots * BYTES_IN_BUCKET);
+		hashTable.seek(0);
+		for (int i = 0; i < numSlots * SLOT_SIZE; i++) {
+			hashTable.writeInt(EMPTY_SLOT);
+		}
+	}
+
+	/**
+	 * 
+	 * @param slot
+	 * @return
+	 * @throws IOException
+	 */
+	public int[] readBucket(int slot) throws IOException {
+		int bucketNum = slot / BUCKET_SIZE;
+
+		if (currentBucketNum != bucketNum || currentBucketDirty) {
+			int[] bucket = new int[SLOTS_IN_BUCKET];
+			byte[] bucket_bytes = new byte[BYTES_IN_BUCKET];
+//			System.out.println("Reading Bucket #" + bucketNum
+//					+ (currentBucketDirty ? " (dirty)" : "") + " (slot:" + slot
+//					+ ")");
+			// Seek to beginning of bucket
+
+			hashTable.seek((long) bucketNum * BYTES_IN_BUCKET);
+			// Read entire bucket into memory
+			hashTable.read(bucket_bytes);
+
+			// Convert the bucket to integer array
+			for (int i = 0; i < SLOTS_IN_BUCKET; i++) {
+				bucket[i] = (bucket_bytes[i * SLOT_ITEM_BYTES] << 24)
+						| (bucket_bytes[i * SLOT_ITEM_BYTES + 1] << 16)
+						| (bucket_bytes[i * SLOT_ITEM_BYTES + 2] << 8)
+						| (bucket_bytes[i * SLOT_ITEM_BYTES + 3]);
+			}
+			currentBucket = bucket;
+			currentBucketNum = bucketNum;
+			currentBucketDirty = false;
+
+//			 for (int i = 0; i < bucket.length; i += 4) {
+//			 System.out.println("[" + (i / 4) + "] " + bucket[i] + " "
+//						+ bucket[i + 1] + " " + bucket[i + 2] + " "
+//						+ bucket[i + 3]);
+//			 }
 		}
 
+		return currentBucket;
 	}
 
 	/**
@@ -58,23 +113,32 @@ public class HashTable {
 	 * @param sequenceHandle
 	 * @throws HashTableFullException
 	 * @throws DuplicateSequenceException
+	 * @throws IOException
 	 */
-	public void insert(String sequenceID, MemoryHandle sequenceHandle)
-			throws HashTableFullException, DuplicateSequenceException {
+	public void insert(String sequenceID, MemoryHandle sequenceIdHandle,
+			MemoryHandle sequenceHandle) throws HashTableFullException,
+			DuplicateSequenceException, IOException {
+
 		int homeSlot = sfold(sequenceID);
 		int currentSlot = homeSlot;
 
 		// boolean inserted = false;
-		// System.out.println("Inserting " + sequenceID);
+//		 System.out.println("Inserting " +
+//		 sequenceID+" "+sequenceHandle.getSequenceLength());
+		readBucket(homeSlot);
 		do {
 			if (isSlotAvailable(currentSlot)) {
 				// System.out.println("  Took slot " + currentSlot);
 
-				MemoryHandle handle = memoryManager.storeSequence(sequenceID);
-				setSlot(currentSlot, handle.getSequenceFileOffset(),
-						handle.getSequenceLength(),
-						sequenceHandle.getSequenceFileOffset(),
+				writeSlot(currentSlot, sequenceIdHandle.getByteOffset(),
+						sequenceIdHandle.getSequenceLength(),
+						sequenceHandle.getByteOffset(),
 						sequenceHandle.getSequenceLength());
+
+				if ((int) currentSlot / BUCKET_SIZE == currentBucketNum) {
+					currentBucketDirty = true;
+				}
+
 				return;
 
 			} else if (getSequenceIdLength(currentSlot) == sequenceID.length()) {
@@ -89,9 +153,6 @@ public class HashTable {
 			currentSlot = nextSlot(currentSlot);
 		} while (currentSlot != homeSlot);
 
-		// if (!inserted) {
-		// throw new HashTableFullException();
-		// }
 		throw new HashTableFullException();
 	}
 
@@ -100,10 +161,13 @@ public class HashTable {
 	 * 
 	 * @param sequenceID
 	 * @throws SequenceNotFoundException
+	 * @throws IOException
 	 */
-	public void remove(String sequenceID) throws SequenceNotFoundException {
+	public void remove(String sequenceID) throws SequenceNotFoundException,
+			IOException {
 		int homeSlot = sfold(sequenceID);
 		int currentSlot = homeSlot;
+		readBucket(homeSlot);
 		do {
 			if (isSlotEmpty(currentSlot)) {
 				throw new SequenceNotFoundException(sequenceID);
@@ -112,17 +176,24 @@ public class HashTable {
 				// Check if we found it
 				if (sequenceID.equals(retrieveSequenceID(currentSlot))) {
 					// Print the full sequence
+					System.out.println("Sequence Removed: "+sequenceID);
 					printSequence(currentSlot);
-					// Remove the sequence ID from HashTable's MM
+					
+					// Remove the sequence ID from MM
 					memoryManager.removeSequence(
 							getSequenceIdOffset(currentSlot),
 							getSequenceIdLength(currentSlot));
-					// Remove the sequence from the sequence file MM
-					sequenceFileMemoryManager.removeSequence(
+					// Remove the sequence from MM
+					memoryManager.removeSequence(
 							getSequenceOffset(currentSlot),
 							getSequenceLength(currentSlot));
 					// Clear the slot in the hash table
 					removeSlot(currentSlot);
+
+					if ((int) currentSlot / BUCKET_SIZE == currentBucketNum) {
+						currentBucketDirty = true;
+					}
+
 					return;
 				}
 			}
@@ -138,11 +209,13 @@ public class HashTable {
 	 * 
 	 * @param sequenceID
 	 * @throws SequenceNotFoundException
+	 * @throws IOException
 	 */
-	public void search(String sequenceID) throws SequenceNotFoundException {
+	public void search(String sequenceID) throws SequenceNotFoundException,
+			IOException {
 		int homeSlot = sfold(sequenceID);
 		int currentSlot = homeSlot;
-
+		readBucket(homeSlot);
 		do {
 			if (isSlotEmpty(currentSlot)) {
 				throw new SequenceNotFoundException(sequenceID);
@@ -167,35 +240,31 @@ public class HashTable {
 	 * @param slot
 	 */
 	public void printSequence(int slot) {
-		String sequence = sequenceFileMemoryManager.retrieveSequence(
+		String sequence = memoryManager.retrieveSequence(
 				getSequenceOffset(slot), getSequenceLength(slot));
+		System.out.println("Printing "+getSequenceOffset(slot)+" "+getSequenceLength(slot));
 		System.out.println(sequence);
 	}
 
 	/**
 	 * Prints the contents of the HashTable
+	 * 
+	 * @throws IOException
 	 */
-	public void print() {
+	public void print() throws IOException {
 		System.out.println("SequenceIDs:");
 		for (int slot = 0; slot < numSlots; slot++) {
-			// String slotVal;
-			// if (isSlotEmpty(slot)) {
-			// slotVal = "empty";
-			// } else if (isSlotTombstone(slot)) {
-			// slotVal = "tombstone";
-			// } else {
-			// slotVal = retrieveSequenceID(slot);
-			// }
-			//
-			// System.out.println(slot + " -> " + slotVal);
-
+			// Retrieve each bucket from hash file
+			if (slot % BUCKET_SIZE == 0) {
+				readBucket(slot);
+			}
 			if (!isSlotAvailable(slot)) {
 				System.out.print("  ");
 				System.out.print(retrieveSequenceID(slot));
 				System.out.println(": hash slot [" + slot + "]");
 			}
 		}
-		sequenceFileMemoryManager.printFreeBlocks();
+		memoryManager.printFreeBlocks();
 	}
 
 	/**
@@ -221,31 +290,44 @@ public class HashTable {
 	 * @param sequenceIdLength
 	 * @param sequenceOffset
 	 * @param sequenceLength
+	 * @throws IOException
 	 */
-	public void setSlot(int slot, int sequenceIdOffset, int sequenceIdLength,
-			int sequenceOffset, int sequenceLength) {
-		table[slot * SLOT_SIZE + ID_POS_OFFSET] = sequenceIdOffset;
-		table[slot * SLOT_SIZE + ID_LEN_OFFSET] = sequenceIdLength;
-		table[slot * SLOT_SIZE + SEQ_POS_OFFSET] = sequenceOffset;
-		table[slot * SLOT_SIZE + SEQ_LEN_OFFSET] = sequenceLength;
+	public void writeSlot(int slot, MemoryHandle sequenceIdHandle,
+			MemoryHandle sequenceHandle) throws IOException {
+		writeSlot(slot, sequenceIdHandle.getByteOffset(),
+				sequenceIdHandle.getSequenceLength(),
+				sequenceHandle.getByteOffset(),
+				sequenceHandle.getSequenceLength());
+	}
+
+	public void writeSlot(int slot, int sequenceIdOffset, int sequenceIdLength,
+			int sequenceOffset, int sequenceLength) throws IOException {
+		// System.out.println("Writing "+sequenceIdOffset+" "+sequenceIdLength+" "+sequenceOffset+" "+sequenceLength);
+		hashTable.seek(slot * SLOT_SIZE * SLOT_ITEM_BYTES);
+		hashTable.writeInt(sequenceIdOffset);
+		hashTable.writeInt(sequenceIdLength);
+		hashTable.writeInt(sequenceOffset);
+		hashTable.writeInt(sequenceLength);
 	}
 
 	/**
 	 * Empties a slot
 	 * 
 	 * @param slot
+	 * @throws IOException
 	 */
-	public void clearSlot(int slot) {
-		setSlot(slot, EMPTY_SLOT, EMPTY_SLOT, EMPTY_SLOT, EMPTY_SLOT);
+	public void clearSlot(int slot) throws IOException {
+		writeSlot(slot, EMPTY_SLOT, EMPTY_SLOT, EMPTY_SLOT, EMPTY_SLOT);
 	}
 
 	/**
 	 * Removes a slot and replaces it with a tombstone
 	 * 
 	 * @param slot
+	 * @throws IOException
 	 */
-	public void removeSlot(int slot) {
-		setSlot(slot, TOMBSTONE_SLOT, TOMBSTONE_SLOT, TOMBSTONE_SLOT,
+	public void removeSlot(int slot) throws IOException {
+		writeSlot(slot, TOMBSTONE_SLOT, TOMBSTONE_SLOT, TOMBSTONE_SLOT,
 				TOMBSTONE_SLOT);
 	}
 
@@ -256,7 +338,7 @@ public class HashTable {
 	 * @return
 	 */
 	protected int getSequenceIdLength(int slot) {
-		return table[slot * SLOT_SIZE + ID_LEN_OFFSET];
+		return currentBucket[currentBucketInd(slot) + ID_LEN_OFFSET];
 	}
 
 	/**
@@ -266,7 +348,7 @@ public class HashTable {
 	 * @return
 	 */
 	protected int getSequenceIdOffset(int slot) {
-		return table[slot * SLOT_SIZE + ID_POS_OFFSET];
+		return currentBucket[currentBucketInd(slot) + ID_POS_OFFSET];
 	}
 
 	/**
@@ -276,7 +358,7 @@ public class HashTable {
 	 * @return
 	 */
 	protected int getSequenceLength(int slot) {
-		return table[slot * SLOT_SIZE + SEQ_LEN_OFFSET];
+		return currentBucket[currentBucketInd(slot) + SEQ_LEN_OFFSET];
 	}
 
 	/**
@@ -286,7 +368,7 @@ public class HashTable {
 	 * @return
 	 */
 	protected int getSequenceOffset(int slot) {
-		return table[slot * SLOT_SIZE + SEQ_POS_OFFSET];
+		return currentBucket[currentBucketInd(slot) + SEQ_POS_OFFSET];
 	}
 
 	/**
@@ -296,7 +378,7 @@ public class HashTable {
 	 * @return
 	 */
 	protected boolean isSlotEmpty(int slot) {
-		return (table[slot * SLOT_SIZE] == EMPTY_SLOT);
+		return (currentBucket[currentBucketInd(slot)] == EMPTY_SLOT);
 	}
 
 	/**
@@ -306,7 +388,19 @@ public class HashTable {
 	 * @return
 	 */
 	protected boolean isSlotTombstone(int slot) {
-		return (table[slot * SLOT_SIZE] == TOMBSTONE_SLOT);
+		return (currentBucket[currentBucketInd(slot)] == TOMBSTONE_SLOT);
+	}
+
+	/**
+	 * Gets the index in the bucket data for an arbitrary slot
+	 * 
+	 * @param slot
+	 * @return
+	 */
+	protected int currentBucketInd(int slot) {
+		// System.out.println("  "+slot+"->"+((slot % BUCKET_SIZE) *
+		// SLOT_SIZE));
+		return (slot % BUCKET_SIZE) * SLOT_SIZE;
 	}
 
 	/**
@@ -357,9 +451,5 @@ public class HashTable {
 
 		sum = (sum * sum) >> 8;
 		return (int) (Math.abs(sum) % this.numSlots);
-	}
-
-	public void printFreeBlocks() {
-		memoryManager.printFreeBlocks();
 	}
 }

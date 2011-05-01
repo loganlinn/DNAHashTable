@@ -29,7 +29,7 @@ public class CommandFile {
 								// parsing
 
 	private HashTable hashTable;
-	private MemoryManager sequenceMemoryManager;
+	private MemoryManager memManager;
 
 	/**
 	 * Constructs a CommandFile given the path to a command file
@@ -40,7 +40,7 @@ public class CommandFile {
 			MemoryManager sequenceMemoryManager) {
 		commandFilePath = path;
 		this.hashTable = hashTable;
-		this.sequenceMemoryManager = sequenceMemoryManager;
+		this.memManager = sequenceMemoryManager;
 	}
 
 	/**
@@ -64,13 +64,13 @@ public class CommandFile {
 	 * @return
 	 * @throws NumberFormatException
 	 */
-//	private int getNextIntArgument(StringTokenizer tokenizer)
-//			throws NumberFormatException {
-//		if (tokenizer.hasMoreTokens()) {
-//			return Integer.parseInt(tokenizer.nextToken());
-//		}
-//		return -1;
-//	}
+	// private int getNextIntArgument(StringTokenizer tokenizer)
+	// throws NumberFormatException {
+	// if (tokenizer.hasMoreTokens()) {
+	// return Integer.parseInt(tokenizer.nextToken());
+	// }
+	// return -1;
+	// }
 
 	/**
 	 * Parses the command file Throws an appropriate exception if an error is
@@ -81,14 +81,16 @@ public class CommandFile {
 	 * @throws IOException
 	 * @throws P3Exception
 	 */
-	public void parse()
-			throws IOException {
+	public void parse() throws IOException {
 
 		File commandFile = new File(this.commandFilePath);
 
 		BufferedReader br = new BufferedReader(new InputStreamReader(
 				new DataInputStream(new FileInputStream(commandFile))));
-		String line, command, argument = null;
+		String line, command, sequenceID = null;
+		MemoryHandle sequenceIdHandle = null;
+		MemoryHandle sequenceHandle = null;
+
 		while ((line = br.readLine()) != null) {
 			lineNumber++;
 			/**
@@ -105,61 +107,70 @@ public class CommandFile {
 				command = lineTokens.nextToken();
 
 				if (INSERT_COMMAND.equals(command)) {
-					
+
 					/*
 					 * Insert command
 					 */
-					argument = getNextArgument(lineTokens);// sequenceId
+					sequenceID = getNextArgument(lineTokens);// sequenceId
 					try {
-						String sequence = br.readLine();
+						String sequence = br.readLine().trim();
 						lineNumber++;
-						if(sequence == null || sequence.isEmpty()){
-							System.out.println("Expecting a sequence!"+getLineNumberMessage());
+						if (sequence == null || sequence.isEmpty()) {
+							System.out.println("Expecting a sequence!"
+									+ getLineNumberMessage());
 							continue;
 						}
-						hashTable.insert(argument, sequenceMemoryManager
-								.storeSequence(sequence));
+						sequenceIdHandle = memManager.storeSequence(sequenceID);
+						sequenceHandle = memManager.storeSequence(sequence);
+						System.out.println(sequenceIdHandle);
+						System.out.println(sequenceHandle);
+						hashTable.insert(sequenceID, sequenceIdHandle,
+								sequenceHandle);
+
 					} catch (HashTableFullException e) {
 						System.out.println(e.getMessage());
+						// Remove the rejected sequence data from memory manager
+						memManager.removeSequence(sequenceIdHandle);
+						memManager.removeSequence(sequenceHandle);
 					} catch (DuplicateSequenceException e) {
 						System.out.println(e.getMessage());
 					}
-					
+
 				} else if (REMOVE_COMMAND.equals(command)) {
-					
+
 					/*
 					 * Remove command
 					 */
-					argument = getNextArgument(lineTokens);
+					sequenceID = getNextArgument(lineTokens);
 					try {
-						hashTable.remove(argument);
+						hashTable.remove(sequenceID);
 					} catch (SequenceNotFoundException e) {
 						System.out.println(e.getMessage());
 					}
-					
+
 				} else if (PRINT_COMMAND.equals(command)) {
-					
+
 					/*
 					 * Print command
 					 */
 					hashTable.print();
-					
+
 				} else if (SEARCH_COMMAND.equals(command)) {
-					
+
 					/*
 					 * Search command, find the mode
 					 */
-					argument = getNextArgument(lineTokens); // argument is a
-															// sequence
-															// descriptor
+					sequenceID = getNextArgument(lineTokens); // argument is a
+																// sequence
+																// descriptor
 					try {
-						hashTable.search(argument);
+						hashTable.search(sequenceID);
 					} catch (SequenceNotFoundException e) {
 						System.out.println(e.getMessage());
 					}
-					
+
 				} else {
-					
+
 					// The command isn't recognized, throw an exception
 					throw new IOException(UNKNOWN_COMMAND_ERROR_PREFIX
 							+ command + getLineNumberMessage());

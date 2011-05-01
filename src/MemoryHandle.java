@@ -28,7 +28,7 @@ public class MemoryHandle {
 	/**
 	 * @return the sequenceFileOffset
 	 */
-	public int getSequenceFileOffset() {
+	public int getByteOffset() {
 		return sequenceFileOffset;
 	}
 
