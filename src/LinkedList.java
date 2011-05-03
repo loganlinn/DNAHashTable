@@ -134,10 +134,6 @@ class LinkedList<E> {
 
 	// Extra stuff not printed in the book.
 	public boolean hasNext() {
-//		System.out.println("  len:"+length());
-//		System.out.println("  head==tail?"+(head==tail));
-//		System.out.println("  head==curr?"+(head==curr));
-//		System.out.println("  curr==tail?"+(curr==tail));
 		return (curr != tail);
 	}
 
@@ -156,19 +152,12 @@ class LinkedList<E> {
 		StringBuffer out = new StringBuffer((length() + 1) * 4);
 
 		moveToStart();
-		out.append("< ");
-		for (int i = 0; i < oldPos; i++) {
+		for (int i = 0; i < length; i++) {
+			out.append("  ");
 			out.append(getValue());
-			out.append(" ");
+			if(i != length-1) out.append("\n");
 			next();
 		}
-		out.append("| ");
-		for (int i = oldPos; i < length; i++) {
-			out.append(getValue());
-			out.append(" ");
-			next();
-		}
-		out.append(">");
 		moveToPos(oldPos); // Reset the fence to its original position
 		return out.toString();
 	}

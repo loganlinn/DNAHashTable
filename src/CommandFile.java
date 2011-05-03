@@ -122,8 +122,6 @@ public class CommandFile {
 						}
 						sequenceIdHandle = memManager.storeSequence(sequenceID);
 						sequenceHandle = memManager.storeSequence(sequence);
-						System.out.println(sequenceIdHandle);
-						System.out.println(sequenceHandle);
 						hashTable.insert(sequenceID, sequenceIdHandle,
 								sequenceHandle);
 

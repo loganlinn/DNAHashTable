@@ -416,9 +416,9 @@ public class MemoryManager {
 		 */
 		public void print() {
 			if (freeBlocks.length() == 0) {
-				System.out.println("  Free Block List: none");
+				System.out.println("Free Block List: none");
 			} else {
-				System.out.println("  Free Block List:");
+				System.out.println("Free Block List:");
 				System.out.println(freeBlocks);
 			}
 		}
